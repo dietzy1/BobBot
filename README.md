@@ -1,0 +1,2 @@
+# bottybot
+Golang discord bot
