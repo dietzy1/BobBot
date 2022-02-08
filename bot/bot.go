@@ -55,7 +55,7 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 	if strings.HasPrefix(m.Content, "!delete") {
 		function.Delete(m)
-		db.DeleteData(function.Person)
+		//	db.DeleteData(function.Person)
 		_, _ = s.ChannelMessageSend(m.ChannelID, "User has been succesfully deleted from the database")
 	}
 
