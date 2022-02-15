@@ -15,43 +15,7 @@ var Url string                  //op.gg URL
 var Person string               //Person assigned to a URL
 var Region string               //Region assigned
 
-func CheckElo(Url string) string {
-	//Needs to become a variable later on so the bot can interact
-	// use file.open
-	if Url == "Error" {
-		return "Error"
-	}
-
-	//Open and close the http handle
-	response, err := http.Get(Url)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer response.Body.Close()
-	//Statuscode 100-200-300 good // 400-500 bad
-	if response.StatusCode > 400 {
-		fmt.Println("Status Code:", response.StatusCode)
-	}
-	doc, err := goquery.NewDocumentFromReader(response.Body)
-	if err != nil {
-		fmt.Println(err)
-	}
-	checkElo, err := doc.Find("span.LeaguePoints").Html()
-	if err != nil {
-		fmt.Println(err)
-	}
-	checkTierRank, err := doc.Find("div.TierRank").Html()
-	if err != nil {
-		fmt.Println(err)
-	}
-	//Removesconsequevent whitespace
-	checkEloNoWhiteSpace := strings.TrimSpace(checkElo)
-	checkTierRankNoWhiteSpace := strings.TrimSpace(checkTierRank)
-	combinedTierElo := checkTierRankNoWhiteSpace + " " + checkEloNoWhiteSpace
-	fmt.Println(combinedTierElo)
-	return combinedTierElo
-}
-func SplitString(m *discordgo.MessageCreate) (string string) {
+func SplitString(m *discordgo.MessageCreate) string {
 	str := strings.Split(m.Content, " ")[1:]
 	if len(str) >= 3 {
 		fmt.Println("Error")
@@ -61,9 +25,17 @@ func SplitString(m *discordgo.MessageCreate) (string string) {
 		fmt.Println("error")
 		return "Error"
 	}
-	Person = str[0]
-	Url = str[1]
-	return Url
+	if len(str) >= 1 {
+		temp := ""
+		for i := 0; i < len(str); i++ {
+			temp = temp + str[i] + "%20"
+			Person = Person + str[i] + "%20"
+		}
+		Person = strings.Trim(temp, "%20") //removes last %20
+
+		return Person
+	}
+	return Person
 }
 
 //Acceps a message from API and removes prefix and indexes into 2 seperate substrings, who are assigned to variables.
@@ -149,6 +121,7 @@ func Search(Region string, Person string) string {
 	}
 }
 
+//Function used together with mongoDB,
 func Add(m *discordgo.MessageCreate) (string, string, error) {
 	str := strings.Split(m.Content, " ")[1:]
 	if len(str) == 0 {
@@ -198,42 +171,37 @@ func AddFromSearch() {
 
 }
 
-/* Step guide:
-recieve message similar to this: !add Dietzy op.ggURL
-->
-Function Add that removes !search and calls the database function
-->
-Database function calls mongodb
-->
-mongoDB returns to database function
-->database functions returns to bot function with a  */
-
-/*
-// TO DO
-func SplitStringSearch(m *discordgo.MessageCreate) (string, string, error) {
-	str := strings.Split(m.Content, " ")[1:]
-	if len(str) >= 3 {
-		fmt.Println("Error")
+//Function used to webscrabe spans and divs on a website manually.
+func spanElo(Url string) string {
+	if Url == "Error" {
 		return "Error"
 	}
-	if len(str) == 0 {
-		fmt.Println("error")
-		return "Error"
-	} // TO DO
-	if len(str) >= 2 {
-		Person = str[0]
-		Region = str[1]
-		Url := "https://euw.op.gg/summoner/userName=" + Person
-		return Region, Url
-
+	//Open and close the http handle
+	response, err := http.Get(Url)
+	if err != nil {
+		fmt.Println(err)
 	}
-
-	if len(str) >= 1 {
-		Person = str[0]
-		Url := "https://euw.op.gg/summoner/userName=" + Person
-		return Url
+	defer response.Body.Close()
+	//Statuscode 100-200-300 good // 400-500 bad
+	if response.StatusCode > 400 {
+		fmt.Println("Status Code:", response.StatusCode)
 	}
-	return Url
+	doc, err := goquery.NewDocumentFromReader(response.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	checkElo, err := doc.Find("span.LeaguePoints").Html()
+	if err != nil {
+		fmt.Println(err)
+	}
+	checkTierRank, err := doc.Find("div.TierRank").Html()
+	if err != nil {
+		fmt.Println(err)
+	}
+	//Removesconsequevent whitespace
+	checkEloNoWhiteSpace := strings.TrimSpace(checkElo)
+	checkTierRankNoWhiteSpace := strings.TrimSpace(checkTierRank)
+	combinedTierElo := checkTierRankNoWhiteSpace + " " + checkEloNoWhiteSpace
+	fmt.Println(combinedTierElo)
+	return combinedTierElo
 }
-*/
-//!elo dietzy euw

@@ -38,10 +38,13 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == BotID {
 		return
 	}
+
 	if strings.HasPrefix(m.Content, "!elo") {
 		function.SplitString(m)
-		_, _ = s.ChannelMessageSend(m.ChannelID, function.Person+" is "+function.CheckElo(function.Url))
+		_, _ = s.ChannelMessageSend(m.ChannelID, function.Person+" is absolutely fcking pisslow elo")
+		_, _ = s.ChannelMessageSend(m.ChannelID, db.SearchData(function.Person))
 	}
+
 	if strings.HasPrefix(m.Content, "!search") {
 		//	function.SplitStringSearch(m) //real function just testing the other
 		function.SplitStringRegion(m)
@@ -51,12 +54,25 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if strings.HasPrefix(m.Content, "!add") {
 		function.Add(m)
 		db.StoreData(function.Person, function.Url)
-		_, _ = s.ChannelMessageSend(m.ChannelID, "User has succesfully been stored in the database, use '!elo user' to check")
+
+		if db.UrlString == db.Person {
+			_, _ = s.ChannelMessageSend(m.ChannelID, "Not succesful! - Username already exists in database")
+		} else {
+			_, _ = s.ChannelMessageSend(m.ChannelID, "User has succesfully been stored in the database, use '!elo user' to check")
+		}
 	}
 	if strings.HasPrefix(m.Content, "!delete") {
 		function.Delete(m)
-		//	db.DeleteData(function.Person)
+		db.DeleteData(function.Person)
 		_, _ = s.ChannelMessageSend(m.ChannelID, "User has been succesfully deleted from the database")
 	}
+	if strings.HasPrefix(m.Content, "!help") {
+		_, _ = s.ChannelMessageSend(m.ChannelID, "Here is a list of commands and their shitty syntax: \n")
+		_, _ = s.ChannelMessageSend(m.ChannelID, "!search, !elo, !delete, !add")
+		_, _ = s.ChannelMessageSend(m.ChannelID, "!search region username     -Example: !search euw dietzy ")
 
+		_, _ = s.ChannelMessageSend(m.ChannelID, "!elo username     -Example: !elo dietzy")
+		_, _ = s.ChannelMessageSend(m.ChannelID, "!delete name     -Example: !delete dietzy")
+		_, _ = s.ChannelMessageSend(m.ChannelID, "!add name Op.ggURL     -Example: !add dietzy https://euw.op.gg/summoner/userName=dietzy")
+	}
 }

@@ -8,11 +8,12 @@ import (
 	"log"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type User struct {
+type UserStruct struct {
 	Person string `bson:"Name"`
 	Url    string `bson:"Url"`
 }
@@ -20,11 +21,66 @@ type configStruct struct {
 	Token string `json:"Token"`
 }
 
-var user User
+var User UserStruct
 var config *configStruct
+var UrlString string
+var Person string
 
-// TODO needs to check if if name is already existing in the database
-func StoreData(Person string, Url string) {
+//Used together with !add - Also checks prior if name already exists in database if it does its discarded.
+func StoreData(Person, Url string) {
+	ReadConfig()
+	client, err := mongo.NewClient(options.Client().ApplyURI(config.Token))
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	err = client.Connect(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	userDatabase := client.Database("userDatabase")
+	userCollection := userDatabase.Collection("UserStructs")
+	User := UserStruct{
+		Person: Person,
+		Url:    Url,
+	}
+	filterCursor, err := userCollection.Find(ctx, bson.M{"Name": Person})
+	var result []bson.M
+	if err = filterCursor.All(ctx, &result); err != nil {
+		log.Fatal(err)
+	}
+	if len(result) == 0 {
+		fmt.Println("Fuck this shit")
+		insertResult, err := userCollection.InsertOne(ctx, User)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(insertResult.InsertedID, "Cba dealing with this shit for now TODO")
+		client.Disconnect(ctx)
+	}
+	if len(result) >= 1 {
+		fmt.Println(User)
+		var interfaceToString interface{}
+		interfaceToString = result[0]["Name"]
+		UrlString := fmt.Sprintf("%v", interfaceToString)
+		if err != nil {
+			panic(err)
+		}
+
+		if UrlString != Person {
+			insertResult, err := userCollection.InsertOne(ctx, User)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println(insertResult.InsertedID, "Cba dealing with this shit for now TODO 🚀")
+			client.Disconnect(ctx)
+		}
+		if UrlString == Person {
+			fmt.Println("Dont fcking do shit")
+			client.Disconnect(ctx)
+		}
+	}
+}
+
+//Used together with !delete
+func DeleteData(Person string) {
 	ReadConfig()
 	client, err := mongo.NewClient(options.Client().ApplyURI(config.Token))
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
@@ -33,17 +89,43 @@ func StoreData(Person string, Url string) {
 		log.Fatal(err)
 	}
 	defer client.Disconnect(ctx)
+
 	userDatabase := client.Database("userDatabase")
 	userCollection := userDatabase.Collection("UserStructs")
-	user := User{
-		Person: Person,
-		Url:    Url,
+	result, err := userCollection.DeleteOne(ctx, bson.M{"Name": Person})
+	if err != nil {
+		log.Fatal(err)
 	}
-	insertResult, err := userCollection.InsertOne(ctx, user)
+	fmt.Printf("DeleteOne removed %v document(s)\n", result.DeletedCount)
+}
+
+//Used together with !search
+func SearchData(Person string) string {
+	ReadConfig()
+	client, err := mongo.NewClient(options.Client().ApplyURI(config.Token))
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	err = client.Connect(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Disconnect(ctx)
+
+	userDatabase := client.Database("userDatabase")
+	userCollection := userDatabase.Collection("UserStructs")
+	filterCursor, err := userCollection.Find(ctx, bson.M{"Name": Person})
+
+	var result []bson.M
+	if err = filterCursor.All(ctx, &result); err != nil {
+		log.Fatal(err)
+	}
+	//result[0]["Url"] = User.Url
+	var interfaceToString interface{}
+	interfaceToString = result[0]["Url"]
+	UrlString := fmt.Sprintf("%v", interfaceToString)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(insertResult.InsertedID)
+	return UrlString
 }
 
 //Used to hide the mongoDB APPLYURI
@@ -65,35 +147,3 @@ func ReadConfig() error {
 	//Token = config.Token
 	return nil
 }
-
-/* func SearchData() {
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb+srv://MartinVad:xykjo6-fizbuh-Deqmim@cluster0.pdrpb.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"))
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	err = client.Connect(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer client.Disconnect(ctx)
-
-	userDatabase := client.Database("userDatabase")
-	userCollection := userDatabase.Collection("UserStructs")
-	cursor, err := userCollection.Find(ctx, bson.M{"Name":}
-	if err != nil {
-		panic(err)
-	}
-	if err = cursor.All(ctx, &userCollection); err != nil {
-		panic(err)
-	}
-/* 	fmt.Println(userCollection) */
-/*
-func DeleteData(Person string) {
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb+srv://MartinVad:xykjo6-fizbuh-Deqmim@cluster0.pdrpb.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"))
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	err = client.Connect(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer client.Disconnect(ctx)
-
-}
-*/
