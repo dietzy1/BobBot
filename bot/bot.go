@@ -75,4 +75,13 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		_, _ = s.ChannelMessageSend(m.ChannelID, "!delete name     -Example: !delete dietzy")
 		_, _ = s.ChannelMessageSend(m.ChannelID, "!add name Op.ggURL     -Example: !add dietzy https://euw.op.gg/summoner/userName=dietzy")
 	}
+	if strings.HasPrefix(m.Content, "!list") {
+		db.List()
+		for _, v := range db.ListResult {
+			str := fmt.Sprintf("%v", v)
+			_, _ = s.ChannelMessageSend(m.ChannelID, str)
+
+		}
+	}
+
 }

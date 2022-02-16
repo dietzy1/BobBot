@@ -25,6 +25,8 @@ var User UserStruct
 var config *configStruct
 var UrlString string
 var Person string
+var NameString string
+var ListResult []bson.M
 
 //Used together with !add - Also checks prior if name already exists in database if it does its discarded.
 func StoreData(Person, Url string) {
@@ -126,6 +128,35 @@ func SearchData(Person string) string {
 		panic(err)
 	}
 	return UrlString
+}
+
+func List() {
+	ReadConfig()
+	client, err := mongo.NewClient(options.Client().ApplyURI(config.Token))
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	err = client.Connect(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Disconnect(ctx)
+
+	userDatabase := client.Database("userDatabase")
+	userCollection := userDatabase.Collection("UserStructs")
+	filterCursor, err := userCollection.Find(ctx, bson.M{})
+
+	//
+	if err = filterCursor.All(ctx, &ListResult); err != nil {
+		log.Fatal(err)
+	}
+
+	//fmt.Println(UrlString, NameString)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func AddFromSearch() {
+
 }
 
 //Used to hide the mongoDB APPLYURI
