@@ -159,7 +159,6 @@ func Delete(m *discordgo.MessageCreate) (string, error) {
 	return Person, nil
 }
 
-
 //Function used to webscrabe spans and divs on a website manually.
 func spanElo(Url string) string {
 	if Url == "Error" {

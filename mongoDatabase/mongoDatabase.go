@@ -27,6 +27,7 @@ var UrlString string
 var Person string
 var NameString string
 var ListResult []bson.M
+var Boolio bool
 
 //Used together with !add - Also checks prior if name already exists in database if it does its discarded.
 func StoreData(Person, Url string) {
@@ -49,13 +50,13 @@ func StoreData(Person, Url string) {
 		log.Fatal(err)
 	}
 	if len(result) == 0 {
-		fmt.Println("Fuck this shit")
 		insertResult, err := userCollection.InsertOne(ctx, User)
 		if err != nil {
 			panic(err)
 		}
 		fmt.Println(insertResult.InsertedID, "Cba dealing with this shit for now TODO")
 		client.Disconnect(ctx)
+		Boolio = true
 	}
 	if len(result) >= 1 {
 		fmt.Println(User)
@@ -65,8 +66,8 @@ func StoreData(Person, Url string) {
 		if err != nil {
 			panic(err)
 		}
-
 		if UrlString != Person {
+			Boolio = true
 			insertResult, err := userCollection.InsertOne(ctx, User)
 			if err != nil {
 				panic(err)
@@ -75,7 +76,7 @@ func StoreData(Person, Url string) {
 			client.Disconnect(ctx)
 		}
 		if UrlString == Person {
-			fmt.Println("Dont fcking do shit")
+			Boolio = false
 			client.Disconnect(ctx)
 		}
 	}
@@ -99,6 +100,9 @@ func DeleteData(Person string) {
 		log.Fatal(err)
 	}
 	fmt.Printf("DeleteOne removed %v document(s)\n", result.DeletedCount)
+	newBool := result.DeletedCount != 0
+	Boolio = newBool
+	fmt.Println(Boolio)
 }
 
 //Used together with !search
@@ -120,14 +124,25 @@ func SearchData(Person string) string {
 	if err = filterCursor.All(ctx, &result); err != nil {
 		log.Fatal(err)
 	}
-	//result[0]["Url"] = User.Url
-	var interfaceToString interface{}
-	interfaceToString = result[0]["Url"]
-	UrlString := fmt.Sprintf("%v", interfaceToString)
-	if err != nil {
-		panic(err)
+	//DO NOTHING
+
+	fmt.Println(len(result))
+	if len(result) == 0 {
+		Boolio = false
+	}
+
+	if len(result) == 1 {
+		var interfaceToString interface{}
+		interfaceToString = result[0]["Url"]
+		UrlString := fmt.Sprintf("%v", interfaceToString)
+		Boolio = true
+		if err != nil {
+			panic(err)
+		}
+		return UrlString
 	}
 	return UrlString
+
 }
 
 func List() {
@@ -139,17 +154,12 @@ func List() {
 		log.Fatal(err)
 	}
 	defer client.Disconnect(ctx)
-
 	userDatabase := client.Database("userDatabase")
 	userCollection := userDatabase.Collection("UserStructs")
 	filterCursor, err := userCollection.Find(ctx, bson.M{})
-
-	//
 	if err = filterCursor.All(ctx, &ListResult); err != nil {
 		log.Fatal(err)
 	}
-
-	//fmt.Println(UrlString, NameString)
 	if err != nil {
 		panic(err)
 	}

@@ -38,13 +38,18 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == BotID {
 		return
 	}
-
 	if strings.HasPrefix(m.Content, "!elo") {
 		function.SplitString(m)
-		_, _ = s.ChannelMessageSend(m.ChannelID, function.Person+" is absolutely fcking pisslow elo")
-		_, _ = s.ChannelMessageSend(m.ChannelID, db.SearchData(function.Person))
+		db.SearchData(function.Person)
+		if db.Boolio == true {
+			_, _ = s.ChannelMessageSend(m.ChannelID, function.Person+" is absolutely fcking pisslow elo")
+			_, _ = s.ChannelMessageSend(m.ChannelID, db.SearchData(function.Person))
+			//The problem is right here
+		}
+		if db.Boolio == false {
+			_, _ = s.ChannelMessageSend(m.ChannelID, "For fcks sake can you pls input a prober name, or atleast add them to database")
+		}
 	}
-
 	if strings.HasPrefix(m.Content, "!search") {
 		//	function.SplitStringSearch(m) //real function just testing the other
 		function.SplitStringRegion(m)
@@ -54,17 +59,24 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if strings.HasPrefix(m.Content, "!add") {
 		function.Add(m)
 		db.StoreData(function.Person, function.Url)
-
-		if db.UrlString == db.Person {
+		if db.Boolio == false {
+			fmt.Println(db.UrlString, db.Person)
 			_, _ = s.ChannelMessageSend(m.ChannelID, "Not succesful! - Username already exists in database")
-		} else {
+		}
+		if db.Boolio == true {
+			fmt.Println(db.UrlString, db.Person)
 			_, _ = s.ChannelMessageSend(m.ChannelID, "User has succesfully been stored in the database, use '!elo user' to check")
 		}
 	}
 	if strings.HasPrefix(m.Content, "!delete") {
 		function.Delete(m)
 		db.DeleteData(function.Person)
-		_, _ = s.ChannelMessageSend(m.ChannelID, "User has been succesfully deleted from the database")
+		if db.Boolio == true {
+			_, _ = s.ChannelMessageSend(m.ChannelID, "User has been succesfully deleted from the database")
+		}
+		if db.Boolio == false {
+			_, _ = s.ChannelMessageSend(m.ChannelID, "idk that retard aint in the database bro")
+		}
 	}
 	if strings.HasPrefix(m.Content, "!help") {
 		_, _ = s.ChannelMessageSend(m.ChannelID, "Here is a list of commands and their shitty syntax: \n")
@@ -80,8 +92,6 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		for _, v := range db.ListResult {
 			str := fmt.Sprintf("%v", v)
 			_, _ = s.ChannelMessageSend(m.ChannelID, str)
-
 		}
 	}
-
 }
