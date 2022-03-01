@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/dietzy1/discord/function"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -27,10 +28,14 @@ var UrlString string
 var Person string
 var NameString string
 var ListResult []bson.M
-var Boolio bool
 
 //Used together with !add - Also checks prior if name already exists in database if it does its discarded.
-func StoreData(Person, Url string) {
+func StoreData(Person, Url string, C chan string) {
+	//TODO VALIDATION WITH VALIDATIONBOOL FROM FUNCTION OR SOMETHING DONT FCKING KNOW
+	if Url == "" {
+		message := "That op.gg is not valid you fucktard"
+		C <- message
+	}
 	ReadConfig()
 	client, err := mongo.NewClient(options.Client().ApplyURI(config.Token))
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
@@ -45,10 +50,14 @@ func StoreData(Person, Url string) {
 		Url:    Url,
 	}
 	filterCursor, err := userCollection.Find(ctx, bson.M{"Name": Person})
+	if err != nil {
+		log.Fatal(err)
+	}
 	var result []bson.M
 	if err = filterCursor.All(ctx, &result); err != nil {
 		log.Fatal(err)
 	}
+	//Means no result was found in the database
 	if len(result) == 0 {
 		insertResult, err := userCollection.InsertOne(ctx, User)
 		if err != nil {
@@ -56,8 +65,11 @@ func StoreData(Person, Url string) {
 		}
 		fmt.Println(insertResult.InsertedID, "Cba dealing with this shit for now TODO")
 		client.Disconnect(ctx)
-		Boolio = true
+		message := "Yo I added someone to the database"
+		C <- message
+
 	}
+	//means a result was found in the database
 	if len(result) >= 1 {
 		fmt.Println(User)
 		var interfaceToString interface{}
@@ -66,24 +78,29 @@ func StoreData(Person, Url string) {
 		if err != nil {
 			panic(err)
 		}
+		//Checks
 		if UrlString != Person {
-			Boolio = true
+
 			insertResult, err := userCollection.InsertOne(ctx, User)
 			if err != nil {
 				panic(err)
 			}
 			fmt.Println(insertResult.InsertedID, "Cba dealing with this shit for now TODO 🚀")
 			client.Disconnect(ctx)
+			message := "Succesfull! but honestly no fcking clue why this part of the function is here"
+			C <- message
 		}
+		//Username alreadt exists in data base - no action is taken
 		if UrlString == Person {
-			Boolio = false
+			message := "Not succesfull! - Username already exists in database for fcks sake"
+			C <- message
 			client.Disconnect(ctx)
 		}
 	}
 }
 
 //Used together with !delete
-func DeleteData(Person string) {
+func DeleteData(Person string, C chan string) {
 	ReadConfig()
 	client, err := mongo.NewClient(options.Client().ApplyURI(config.Token))
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
@@ -100,54 +117,63 @@ func DeleteData(Person string) {
 		log.Fatal(err)
 	}
 	fmt.Printf("DeleteOne removed %v document(s)\n", result.DeletedCount)
-	newBool := result.DeletedCount != 0
-	Boolio = newBool
-	fmt.Println(Boolio)
+	if result.DeletedCount > 1 {
+		message := "Yo I deleted" + function.Person
+		C <- message
+	}
+	if result.DeletedCount < 1 {
+		message := "Yo I didn't delete shit"
+		C <- message
+	}
 }
 
 //Used together with !search
-func SearchData(Person string) string {
+func SearchData(Person string, C chan string) {
 	ReadConfig()
 	client, err := mongo.NewClient(options.Client().ApplyURI(config.Token))
+	if err != nil {
+		log.Fatal(err)
+	}
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	err = client.Connect(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer client.Disconnect(ctx)
-
 	userDatabase := client.Database("userDatabase")
 	userCollection := userDatabase.Collection("UserStructs")
 	filterCursor, err := userCollection.Find(ctx, bson.M{"Name": Person})
-
+	if err != nil {
+		log.Fatal(err)
+	}
 	var result []bson.M
 	if err = filterCursor.All(ctx, &result); err != nil {
 		log.Fatal(err)
 	}
-	//DO NOTHING
-
 	fmt.Println(len(result))
 	if len(result) == 0 {
-		Boolio = false
+		message := "For fcks sake can you pls input a prober name, or atleast add them to database"
+		C <- message
 	}
-
 	if len(result) == 1 {
 		var interfaceToString interface{}
 		interfaceToString = result[0]["Url"]
 		UrlString := fmt.Sprintf("%v", interfaceToString)
-		Boolio = true
+		message := function.Person + " Is absolutely pisslow " + UrlString
+		C <- message
 		if err != nil {
 			panic(err)
 		}
-		return UrlString
 	}
-	return UrlString
-
 }
 
+//Not currently functional
 func List() {
 	ReadConfig()
 	client, err := mongo.NewClient(options.Client().ApplyURI(config.Token))
+	if err != nil {
+		log.Fatal(err)
+	}
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	err = client.Connect(ctx)
 	if err != nil {

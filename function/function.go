@@ -10,12 +10,19 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-var CheckEloNoWhiteSpace string //Span scraped from op.gg - Contains rank and lp
-var Url string                  //op.gg URL
-var Person string               //Person assigned to a URL
-var Region string               //Region assigned
+var Url string    //op.gg URL
+var Person string //Person assigned to a URL
+var Region string //Region assigned
+
+/* type discordStruct struct {
+	s *discordgo.Session
+	m *discordgo.MessageCreate
+}
+
+var MessageHandler *discordStruct */
 
 func SplitString(m *discordgo.MessageCreate) string {
+
 	str := strings.Split(m.Content, " ")[1:]
 	if len(str) >= 3 {
 		fmt.Println("Error")
@@ -31,8 +38,8 @@ func SplitString(m *discordgo.MessageCreate) string {
 			temp = temp + str[i] + "%20"
 			Person = Person + str[i] + "%20"
 		}
-		Person = strings.Trim(temp, "%20") //removes last %20
-
+		lowercaseTemp := strings.ToLower(temp)
+		Person = strings.Trim(lowercaseTemp, "%20") //removes last %20
 		return Person
 	}
 	return Person
@@ -93,31 +100,33 @@ func SplitStringPerson(m *discordgo.MessageCreate) (string, error) {
 			temp = temp + str[i] + "%20"
 			Person = Person + str[i] + "%20"
 		}
-		Person = strings.Trim(temp, "%20") //removes last %20
+		lowercaseTemp := strings.ToLower(temp)
+		Person = strings.Trim(lowercaseTemp, "%20") //removes last %20
 		return Person, nil
 	}
 	return Person, nil
 }
 
 //Search function that works together with splitstringperson and splitstringregion
-func Search(Region string, Person string) string {
+func Search(Region string, Person string, C chan string) {
 	if Region == "euw" || Region == "euwest" {
 		Url := "https://euw.op.gg/summoner/" + "userName=" + Person //Euwest
-		return Url
+		C <- Url
 	}
 	if Region == "eune" || Region == "northeast" {
 		Url := "https://eune.op.gg/summoner/" + "userName=" + Person //EUNE
-		return Url
+		C <- Url
 	}
 	if Region == "kr" || Region == "korea" {
 		Url := "https://www.op.gg/summoner/" + "userName=" + Person //Korea
-		return Url
+		C <- Url
 	}
 	if Region == "na" || Region == "northamerica" || Region == "murica" {
 		Url := "https://na.op.gg/summoner/" + "userName=" + Person //NA
-		return Url
+		C <- Url
 	} else {
-		return "Error"
+		message := "Ran into some error while searching shit"
+		C <- message
 	}
 }
 
@@ -132,13 +141,13 @@ func Add(m *discordgo.MessageCreate) (string, string, error) {
 		fmt.Println("Error2")
 		fmt.Println(len(str))
 		return "", "", errors.New("Error")
-
 	}
 	if len(str) >= 3 {
 		fmt.Println("Error2")
 		return "", "", errors.New("Error")
 	}
-	Person = str[0]
+	temp := str[0]
+	Person = strings.ToLower(temp)
 	Url = str[1]
 	return Person, Url, nil
 }
@@ -159,37 +168,44 @@ func Delete(m *discordgo.MessageCreate) (string, error) {
 	return Person, nil
 }
 
-//Function used to webscrabe spans and divs on a website manually.
-func spanElo(Url string) string {
-	if Url == "Error" {
-		return "Error"
+//Todo would be way better with a regex expression
+func ValidateURL(Url string, C chan string) {
+	splitURL := strings.Split(Url, "//")
+	fmt.Println(splitURL[0])
+	if splitURL[0] == "https:" {
+		response, err := http.Get(Url)
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer response.Body.Close()
+		if response.StatusCode > 400 {
+			fmt.Println("Status Code:", response.StatusCode)
+		}
+		doc, err := goquery.NewDocumentFromReader(response.Body)
+		if err != nil {
+			fmt.Println(err)
+		}
+		validatedURL, err := doc.Find("h2.header__title").Html()
+		if err != nil {
+			fmt.Println(err)
+		}
+		validatedURLNoWhiteSpace := strings.TrimSpace(validatedURL)
+		if validatedURLNoWhiteSpace == "This summoner is not registered at OP.GG. Please check spelling." {
+			message := "Not a valid op.gg you fuckface"
+			C <- message
+		} else {
+			message := "Valid URl"
+			C <- message
+		}
+	} else {
+		message := "Not a valid op.gg you fuckface"
+		C <- message
 	}
-	//Open and close the http handle
-	response, err := http.Get(Url)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer response.Body.Close()
-	//Statuscode 100-200-300 good // 400-500 bad
-	if response.StatusCode > 400 {
-		fmt.Println("Status Code:", response.StatusCode)
-	}
-	doc, err := goquery.NewDocumentFromReader(response.Body)
-	if err != nil {
-		fmt.Println(err)
-	}
-	checkElo, err := doc.Find("span.LeaguePoints").Html()
-	if err != nil {
-		fmt.Println(err)
-	}
-	checkTierRank, err := doc.Find("div.TierRank").Html()
-	if err != nil {
-		fmt.Println(err)
-	}
-	//Removesconsequevent whitespace
-	checkEloNoWhiteSpace := strings.TrimSpace(checkElo)
-	checkTierRankNoWhiteSpace := strings.TrimSpace(checkTierRank)
-	combinedTierElo := checkTierRankNoWhiteSpace + " " + checkEloNoWhiteSpace
-	fmt.Println(combinedTierElo)
-	return combinedTierElo
+}
+
+func TestFunction(m *discordgo.MessageCreate, C chan string) {
+	// TODO I need to format all the messages into the correct format pre channel liftoff
+	message := "shut the fuck up kibby"
+	C <- message
+
 }

@@ -13,6 +13,11 @@ import (
 var BotID string
 var goBot *discordgo.Session
 
+/* type discordStruct struct {
+	s discordgo.Session
+	m discordgo.MessageCreate
+} */
+
 func Start() {
 	goBot, err := discordgo.New("Bot " + config.Token)
 	if err != nil {
@@ -38,60 +43,99 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == BotID {
 		return
 	}
-	if strings.HasPrefix(m.Content, "!elo") {
-		function.SplitString(m)
-		db.SearchData(function.Person)
-		if db.Boolio == true {
-			_, _ = s.ChannelMessageSend(m.ChannelID, function.Person+" is absolutely fcking pisslow elo")
-			_, _ = s.ChannelMessageSend(m.ChannelID, db.SearchData(function.Person))
-			//The problem is right here
-		}
-		if db.Boolio == false {
-			_, _ = s.ChannelMessageSend(m.ChannelID, "For fcks sake can you pls input a prober name, or atleast add them to database")
-		}
+	//FIXED AND FUNCTIONAL
+	if strings.HasPrefix(m.Content, "test") {
+		C := make(chan string, 2)
+		function.TestFunction(m, C)
+		message := <-C
+		_, _ = s.ChannelMessageSend(m.ChannelID, message)
 	}
+	//FIXED AND FUNCTIONAL
+	if strings.HasPrefix(m.Content, "!elo") {
+		C := make(chan string, 2)
+		function.SplitString(m)
+		db.SearchData(function.Person, C)
+		message := <-C
+		_, _ = s.ChannelMessageSend(m.ChannelID, message)
+
+	}
+	//FIXED AND FUNCTIONAL
 	if strings.HasPrefix(m.Content, "!search") {
-		//	function.SplitStringSearch(m) //real function just testing the other
+		C := make(chan string, 2)
 		function.SplitStringRegion(m)
 		function.SplitStringPerson(m)
-		_, _ = s.ChannelMessageSend(m.ChannelID, function.Search(function.Region, function.Person))
-	}
-	if strings.HasPrefix(m.Content, "!add") {
-		function.Add(m)
-		db.StoreData(function.Person, function.Url)
-		if db.Boolio == false {
-			fmt.Println(db.UrlString, db.Person)
-			_, _ = s.ChannelMessageSend(m.ChannelID, "Not succesful! - Username already exists in database")
-		}
-		if db.Boolio == true {
-			fmt.Println(db.UrlString, db.Person)
-			_, _ = s.ChannelMessageSend(m.ChannelID, "User has succesfully been stored in the database, use '!elo user' to check")
-		}
-	}
-	if strings.HasPrefix(m.Content, "!delete") {
-		function.Delete(m)
-		db.DeleteData(function.Person)
-		if db.Boolio == true {
-			_, _ = s.ChannelMessageSend(m.ChannelID, "User has been succesfully deleted from the database")
-		}
-		if db.Boolio == false {
-			_, _ = s.ChannelMessageSend(m.ChannelID, "idk that retard aint in the database bro")
-		}
-	}
-	if strings.HasPrefix(m.Content, "!help") {
-		_, _ = s.ChannelMessageSend(m.ChannelID, "Here is a list of commands and their shitty syntax: \n")
-		_, _ = s.ChannelMessageSend(m.ChannelID, "!search, !elo, !delete, !add")
-		_, _ = s.ChannelMessageSend(m.ChannelID, "!search region username     -Example: !search euw dietzy ")
+		//This function can be added
+		function.Search(function.Region, function.Person, C)
+		message := <-C
+		_, _ = s.ChannelMessageSend(m.ChannelID, message)
 
-		_, _ = s.ChannelMessageSend(m.ChannelID, "!elo username     -Example: !elo dietzy")
-		_, _ = s.ChannelMessageSend(m.ChannelID, "!delete name     -Example: !delete dietzy")
-		_, _ = s.ChannelMessageSend(m.ChannelID, "!add name Op.ggURL     -Example: !add dietzy https://euw.op.gg/summoner/userName=dietzy")
+	}
+	//FIXED AND FUNCTIONAL
+	if strings.HasPrefix(m.Content, "!add") {
+		C := make(chan string, 2)
+		function.Add(m)
+		function.ValidateURL(function.Url, C)
+		message := <-C
+		if message == "Not a valid op.gg you fuckface" {
+			_, _ = s.ChannelMessageSend(m.ChannelID, message)
+		}
+		if message == "Valid URl" {
+			db.StoreData(function.Person, function.Url, C)
+			message := <-C
+			_, _ = s.ChannelMessageSend(m.ChannelID, message)
+		}
+	}
+	// FIXED AND FUNCTIONAL
+	if strings.HasPrefix(m.Content, "!delete") {
+		C := make(chan string, 2)
+		function.Delete(m)
+		db.DeleteData(function.Person, C)
+		message := <-C
+		_, _ = s.ChannelMessageSend(m.ChannelID, message)
+	}
+	//TODO
+	if strings.HasPrefix(m.Content, "!help") {
+		fmt.Println("Fcking learn how to do embeds")
 	}
 	if strings.HasPrefix(m.Content, "!list") {
-		db.List()
-		for _, v := range db.ListResult {
-			str := fmt.Sprintf("%v", v)
-			_, _ = s.ChannelMessageSend(m.ChannelID, str)
-		}
+		fmt.Println("Fcking learn how to use embeds and shit so bot doesn't crash like a retard")
 	}
 }
+
+/* func rateLimit(u *discordgo.User, m *discordgo.MessageCreate) {
+
+	mes
+	discordgo.MessageActivity
+	for i := 1; i < m.Author; i++ {
+
+	}
+	//m.Author.ID
+
+
+} */
+
+//Count each time m.Author.ID is seen if set amount of 50 is met before certain timer then their calls should be blocked.
+
+/* func returnMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if m.Author.ID == BotID {
+		return
+	}
+	_, _ = s.ChannelMessageSend(m.ChannelID, "Not a valid op.gg you fuckface")
+
+} */
+
+//this shit is absolutely useless
+/* _, _ = s.ChannelMessageSend(m.ChannelID, "Here is a list of commands and their shitty syntax: \n")
+_, _ = s.ChannelMessageSend(m.ChannelID, "!search, !elo, !delete, !add")
+_, _ = s.ChannelMessageSend(m.ChannelID, "!search region username     -Example: !search euw dietzy ")
+
+_, _ = s.ChannelMessageSend(m.ChannelID, "!elo username     -Example: !elo dietzy")
+_, _ = s.ChannelMessageSend(m.ChannelID, "!delete name     -Example: !delete dietzy")
+_, _ = s.ChannelMessageSend(m.ChannelID, "!add name Op.ggURL     -Example: !add dietzy https://euw.op.gg/summoner/userName=dietzy") */
+
+/* if strings.HasPrefix(m.Content, "!list") {
+db.List()
+for _, v := range db.ListResult {
+	str := fmt.Sprintf("%v", v)
+	_, _ = s.ChannelMessageSend(m.ChannelID, str)
+} */
