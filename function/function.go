@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -22,7 +23,6 @@ var Region string //Region assigned
 var MessageHandler *discordStruct */
 
 func SplitString(m *discordgo.MessageCreate) string {
-
 	str := strings.Split(m.Content, " ")[1:]
 	if len(str) >= 3 {
 		fmt.Println("Error")
@@ -168,11 +168,13 @@ func Delete(m *discordgo.MessageCreate) (string, error) {
 	return Person, nil
 }
 
-//Todo would be way better with a regex expression
 func ValidateURL(Url string, C chan string) {
-	splitURL := strings.Split(Url, "//")
-	fmt.Println(splitURL[0])
-	if splitURL[0] == "https:" {
+	validate, err := regexp.MatchString(`https?:\/\/(euw)?(na)?(kr)?(eune)?(tr)?(las)?(lan)?\.op\.gg\/.+`, Url)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(validate)
+	if validate {
 		response, err := http.Get(Url)
 		if err != nil {
 			fmt.Println(err)
@@ -197,7 +199,8 @@ func ValidateURL(Url string, C chan string) {
 			message := "Valid URl"
 			C <- message
 		}
-	} else {
+	}
+	if !validate {
 		message := "Not a valid op.gg you fuckface"
 		C <- message
 	}

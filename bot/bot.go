@@ -6,12 +6,17 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/dietzy1/discord/config"
+	"github.com/dietzy1/discord/embedHelp"
 	"github.com/dietzy1/discord/function"
 	db "github.com/dietzy1/discord/mongoDatabase"
 )
 
 var BotID string
 var goBot *discordgo.Session
+
+/* type GobotStruct struct {
+	s *discordgo.Session
+} */
 
 /* type discordStruct struct {
 	s discordgo.Session
@@ -38,6 +43,13 @@ func Start() {
 	}
 	fmt.Println("Bot is running")
 }
+
+//This is experimental shit
+/* func (bob *GobotStruct) HandleMessageCreate() interface{} {
+
+	return func(s *discordgo.Session, m *discordgo.MessageCreate) {
+	}
+} */
 
 func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == BotID {
@@ -95,12 +107,81 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 	//TODO
 	if strings.HasPrefix(m.Content, "!help") {
-		fmt.Println("Fcking learn how to do embeds")
+		embed := embedHelp.NewEmbed()
+		embed.SetTitle("BobBot guide 2k22 visualized🚀🚀🚀🚀")
+		embed.AddField("!search region username", "Example: !search euw twtvkibbylol")
+		embed.AddField("!add name op.ggURL", "Example: !add kibby https://euw.op.gg/summoner/userName=twtvkibbylol ")
+		embed.AddField("!elo assignedName", "Example: !elo kibby")
+		embed.AddField("!delete assignedName", "!delete kibby")
+		embed.AddField("🦖", "🦖")
+
+		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
 	}
 	if strings.HasPrefix(m.Content, "!list") {
-		fmt.Println("Fcking learn how to use embeds and shit so bot doesn't crash like a retard")
+		embed := embedHelp.NewEmbed()
+		embed.SetTitle("Pls dont fcking crash🚀🚀🚀🚀")
+		db.List()
+		for _, v := range db.ListResult {
+			str := fmt.Sprintf("%v", v)
+			strsplit := strings.Split(str, "[")
+			embed.AddFieldnoValue(strsplit[1])
+		}
+		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
 	}
+	if strings.HasSuffix(m.Content, "bonk") {
+		embed := embedHelp.NewEmbed()
+		embed.SetTitle("Fuck off weeb")
+		embed.SetImage("https://c.tenor.com/yHX61qy92nkAAAAC/yoshi-mario.gif")
+		embed.SetColor(0x00ff00)
+		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
+
+	}
+
+	/* if strings.HasPrefix(m.Content, "bonk") {
+		embed := embedHelp.NewEmbed()
+		embed.SetTitle("Fuck off weeb")
+		embed.SetImage("https://c.tenor.com/yHX61qy92nkAAAAC/yoshi-mario.gif")
+		embed.SetColor(0x00ff00)
+		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
+	} */
 }
+
+/* func (&embed.Embed) embedShit() {
+	embed := &discordgo.MessageEmbed{
+		Author:      &discordgo.MessageEmbedAuthor{},
+		Color:       0x00ff00, // Green
+		Description: "This is a discordgo embed",
+		Fields: []*discordgo.MessageEmbedField{
+			&discordgo.MessageEmbedField{
+				Name:   "I am a field",
+				Value:  "I am a value",
+				Inline: true,
+			},
+			&discordgo.MessageEmbedField{
+				Name:   "I am a second field",
+				Value:  "I am a value",
+				Inline: true,
+			},
+		},
+		Image: &discordgo.MessageEmbedImage{
+			URL: "https://cdn.discordapp.com/avatars/119249192806776836/cc32c5c3ee602e1fe252f9f595f9010e.jpg?size=2048",
+		},
+		Thumbnail: &discordgo.MessageEmbedThumbnail{
+			URL: "https://cdn.discordapp.com/avatars/119249192806776836/cc32c5c3ee602e1fe252f9f595f9010e.jpg?size=2048",
+		},
+		Timestamp: time.Now().Format(time.RFC3339), // Discord wants ISO8601; RFC3339 is an extension of ISO8601 and should be completely compatible.
+		Title:     "I am an Embed",
+	}
+	fmt.Println(embed)
+} */
+
+/* session.ChannelMessageSendEmbed(channelid, embed)
+}
+*/
+
+//I dont think so
+//Its just some data structure homding user id, command and some sort of cooldown logic
+//Could be a date or a remaining numbers in ms
 
 /* func rateLimit(u *discordgo.User, m *discordgo.MessageCreate) {
 
@@ -123,15 +204,6 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	_, _ = s.ChannelMessageSend(m.ChannelID, "Not a valid op.gg you fuckface")
 
 } */
-
-//this shit is absolutely useless
-/* _, _ = s.ChannelMessageSend(m.ChannelID, "Here is a list of commands and their shitty syntax: \n")
-_, _ = s.ChannelMessageSend(m.ChannelID, "!search, !elo, !delete, !add")
-_, _ = s.ChannelMessageSend(m.ChannelID, "!search region username     -Example: !search euw dietzy ")
-
-_, _ = s.ChannelMessageSend(m.ChannelID, "!elo username     -Example: !elo dietzy")
-_, _ = s.ChannelMessageSend(m.ChannelID, "!delete name     -Example: !delete dietzy")
-_, _ = s.ChannelMessageSend(m.ChannelID, "!add name Op.ggURL     -Example: !add dietzy https://euw.op.gg/summoner/userName=dietzy") */
 
 /* if strings.HasPrefix(m.Content, "!list") {
 db.List()
