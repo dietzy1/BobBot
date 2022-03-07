@@ -30,7 +30,7 @@ var NameString string
 var ListResult []bson.M
 
 //Used together with !add - Also checks prior if name already exists in database if it does its discarded.
-func StoreData(Person, Url string, C chan string) {
+func StoreData(Person, Url, GuildID string, C chan string) {
 	//TODO VALIDATION WITH VALIDATIONBOOL FROM FUNCTION OR SOMETHING DONT FCKING KNOW
 	if Url == "" {
 		message := "That op.gg is not valid you fucktard"
@@ -43,12 +43,21 @@ func StoreData(Person, Url string, C chan string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	userDatabase := client.Database("userDatabase")
+	//TODO NEEDS TO ADD USERDATABASED BASED ON GUILD.ID
+	if err != nil {
+		fmt.Println("idk bro")
+	}
+
+	//TODO TEMPORARY CODE JUST TO TEST
+	//userDatabase := client.Database("userDatabase")
+	userDatabase := client.Database(GuildID)
 	userCollection := userDatabase.Collection("UserStructs")
 	User := UserStruct{
 		Person: Person,
 		Url:    Url,
 	}
+
+	//Temporary code going up -- normal code is commented out
 	filterCursor, err := userCollection.Find(ctx, bson.M{"Name": Person})
 	if err != nil {
 		log.Fatal(err)
@@ -100,7 +109,7 @@ func StoreData(Person, Url string, C chan string) {
 }
 
 //Used together with !delete
-func DeleteData(Person string, C chan string) {
+func DeleteData(Person, GuildID string, C chan string) {
 	ReadConfig()
 	client, err := mongo.NewClient(options.Client().ApplyURI(config.Token))
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
@@ -110,7 +119,8 @@ func DeleteData(Person string, C chan string) {
 	}
 	defer client.Disconnect(ctx)
 
-	userDatabase := client.Database("userDatabase")
+	//TODO NEEDS TO ADD USERDATABASED BASED ON GUILD.ID
+	userDatabase := client.Database(GuildID)
 	userCollection := userDatabase.Collection("UserStructs")
 	result, err := userCollection.DeleteOne(ctx, bson.M{"Name": Person})
 	if err != nil {
@@ -128,7 +138,7 @@ func DeleteData(Person string, C chan string) {
 }
 
 //Used together with !search
-func SearchData(Person string, C chan string) {
+func SearchData(Person, GuildID string, C chan string) {
 	ReadConfig()
 	client, err := mongo.NewClient(options.Client().ApplyURI(config.Token))
 	if err != nil {
@@ -140,7 +150,8 @@ func SearchData(Person string, C chan string) {
 		log.Fatal(err)
 	}
 	defer client.Disconnect(ctx)
-	userDatabase := client.Database("userDatabase")
+	//TODO NEEDS TO ADD USERDATABASED BASED ON GUILD.ID
+	userDatabase := client.Database(GuildID)
 	userCollection := userDatabase.Collection("UserStructs")
 	filterCursor, err := userCollection.Find(ctx, bson.M{"Name": Person})
 	if err != nil {
@@ -168,7 +179,7 @@ func SearchData(Person string, C chan string) {
 }
 
 //Not currently functional
-func List() {
+func List(GuildID string) {
 	ReadConfig()
 	client, err := mongo.NewClient(options.Client().ApplyURI(config.Token))
 	if err != nil {
@@ -180,7 +191,8 @@ func List() {
 		log.Fatal(err)
 	}
 	defer client.Disconnect(ctx)
-	userDatabase := client.Database("userDatabase")
+	//TODO NEEDS TO ADD USERDATABASED BASED ON GUILD.ID
+	userDatabase := client.Database(GuildID)
 	userCollection := userDatabase.Collection("UserStructs")
 	filterCursor, err := userCollection.Find(ctx, bson.M{})
 	if err = filterCursor.All(ctx, &ListResult); err != nil {

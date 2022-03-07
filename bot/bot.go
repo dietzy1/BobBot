@@ -9,6 +9,7 @@ import (
 	"github.com/dietzy1/discord/embedHelp"
 	"github.com/dietzy1/discord/function"
 	db "github.com/dietzy1/discord/mongoDatabase"
+	"github.com/dietzy1/discord/voiceChat"
 )
 
 var BotID string
@@ -61,12 +62,14 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		function.TestFunction(m, C)
 		message := <-C
 		_, _ = s.ChannelMessageSend(m.ChannelID, message)
+		fmt.Println(m.GuildID)
 	}
 	//FIXED AND FUNCTIONAL
 	if strings.HasPrefix(m.Content, "!elo") {
 		C := make(chan string, 2)
 		function.SplitString(m)
-		db.SearchData(function.Person, C)
+		GuildID := m.GuildID
+		db.SearchData(function.Person, GuildID, C)
 		message := <-C
 		_, _ = s.ChannelMessageSend(m.ChannelID, message)
 
@@ -92,16 +95,20 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 			_, _ = s.ChannelMessageSend(m.ChannelID, message)
 		}
 		if message == "Valid URl" {
-			db.StoreData(function.Person, function.Url, C)
+			GuildID := m.GuildID
+			db.StoreData(function.Person, function.Url, GuildID, C)
+
 			message := <-C
 			_, _ = s.ChannelMessageSend(m.ChannelID, message)
+
 		}
 	}
 	// FIXED AND FUNCTIONAL
 	if strings.HasPrefix(m.Content, "!delete") {
 		C := make(chan string, 2)
+		GuildID := m.GuildID
 		function.Delete(m)
-		db.DeleteData(function.Person, C)
+		db.DeleteData(function.Person, GuildID, C)
 		message := <-C
 		_, _ = s.ChannelMessageSend(m.ChannelID, message)
 	}
@@ -113,18 +120,21 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		embed.AddField("!add name op.ggURL", "Example: !add kibby https://euw.op.gg/summoner/userName=twtvkibbylol ")
 		embed.AddField("!elo assignedName", "Example: !elo kibby")
 		embed.AddField("!delete assignedName", "!delete kibby")
-		embed.AddField("🦖", "🦖")
 
 		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
 	}
 	if strings.HasPrefix(m.Content, "!list") {
 		embed := embedHelp.NewEmbed()
 		embed.SetTitle("Pls dont fcking crash🚀🚀🚀🚀")
-		db.List()
+		GuildID := m.GuildID
+		db.List(GuildID)
+
 		for _, v := range db.ListResult {
-			str := fmt.Sprintf("%v", v)
-			strsplit := strings.Split(str, "[")
-			embed.AddFieldnoValue(strsplit[1])
+			m := v["Name"]
+			m1 := v["Url"]
+			str, str1 := fmt.Sprintf("%v", m), fmt.Sprintf("%v", m1)
+			fmt.Println(str, str1)
+			embed.AddField(str, str1)
 		}
 		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
 	}
@@ -134,17 +144,46 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		embed.SetImage("https://c.tenor.com/yHX61qy92nkAAAAC/yoshi-mario.gif")
 		embed.SetColor(0x00ff00)
 		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
-
 	}
 
-	/* if strings.HasPrefix(m.Content, "bonk") {
-		embed := embedHelp.NewEmbed()
-		embed.SetTitle("Fuck off weeb")
-		embed.SetImage("https://c.tenor.com/yHX61qy92nkAAAAC/yoshi-mario.gif")
-		embed.SetColor(0x00ff00)
-		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
-	} */
+	if strings.HasPrefix(m.Content, "!bonk") {
+
+		// Find the channel that the message came from.
+		c, err := s.State.Channel(m.ChannelID)
+		if err != nil {
+			// Could not find channel.
+			return
+		}
+
+		// Find the guild for that channel.
+		g, err := s.State.Guild(c.GuildID)
+		if err != nil {
+			// Could not find guild.
+			return
+		}
+
+		// BIG TODO
+		// Look for the message sender in that guild's current voice states.
+		for _, vs := range g.VoiceStates {
+			if vs.UserID == m.Author.ID {
+				err = voiceChat.PlaySound(s, g.ID, vs.ChannelID)
+				if err != nil {
+					fmt.Println("Error playing sound:", err)
+				}
+
+				return
+			}
+		}
+	}
 }
+
+/* if strings.HasPrefix(m.Content, "bonk") {
+	embed := embedHelp.NewEmbed()
+	embed.SetTitle("Fuck off weeb")
+	embed.SetImage("https://c.tenor.com/yHX61qy92nkAAAAC/yoshi-mario.gif")
+	embed.SetColor(0x00ff00)
+	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
+} */
 
 /* func (&embed.Embed) embedShit() {
 	embed := &discordgo.MessageEmbed{

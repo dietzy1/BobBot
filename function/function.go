@@ -168,8 +168,11 @@ func Delete(m *discordgo.MessageCreate) (string, error) {
 	return Person, nil
 }
 
+//https?:\/\/(euw)?(na)?(kr)?(eune)?(tr)?(las)?(lan)?\.op\.gg\/.+
+//https?://(euw)?(na)?(kr)?(eune)?(tr)?(las)?(lan)?.op.gg/.+
+
 func ValidateURL(Url string, C chan string) {
-	validate, err := regexp.MatchString(`https?:\/\/(euw)?(na)?(kr)?(eune)?(tr)?(las)?(lan)?\.op\.gg\/.+`, Url)
+	validate, err := regexp.MatchString(`https?://(euw)?(na)?(kr)?(eune)?(tr)?(las)?(lan)?.op.gg/.+`, Url)
 	if err != nil {
 		fmt.Println(err)
 	}
