@@ -2,6 +2,7 @@ package bot
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -52,17 +53,29 @@ func Start() {
 	}
 } */
 
+//BONK TRACKER
+// Each time a message event is recieved then you call a seperate function that ++ a variable based on the user ID which can be found through m.Content
+
 func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == BotID {
 		return
 	}
+	if m.Author.Bot {
+		return
+	}
+	re := regexp.MustCompile(`<:\w+:\d{10,45}>`)
+	if len(re.FindString(m.Content)) >= 1 {
+		Emote := re.FindString(m.Content)
+		db.TrackEmote(Emote, s, m)
+	}
+
 	//FIXED AND FUNCTIONAL
 	if strings.HasPrefix(m.Content, "test") {
 		C := make(chan string, 2)
 		function.TestFunction(m, C)
 		message := <-C
 		_, _ = s.ChannelMessageSend(m.ChannelID, message)
-		fmt.Println(m.GuildID)
+		//fmt.Println(m.GuildID)
 	}
 	//FIXED AND FUNCTIONAL
 	if strings.HasPrefix(m.Content, "!elo") {
@@ -97,10 +110,8 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if message == "Valid URl" {
 			GuildID := m.GuildID
 			db.StoreData(function.Person, function.Url, GuildID, C)
-
 			message := <-C
 			_, _ = s.ChannelMessageSend(m.ChannelID, message)
-
 		}
 	}
 	// FIXED AND FUNCTIONAL
@@ -119,7 +130,7 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		embed.AddField("!search region username", "Example: !search euw twtvkibbylol")
 		embed.AddField("!add name op.ggURL", "Example: !add kibby https://euw.op.gg/summoner/userName=twtvkibbylol ")
 		embed.AddField("!elo assignedName", "Example: !elo kibby")
-		embed.AddField("!delete assignedName", "!delete kibby")
+		embed.AddField("!delete assignedName", "Example: !delete kibby")
 
 		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
 	}
@@ -128,16 +139,14 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		embed.SetTitle("Pls dont fcking crash🚀🚀🚀🚀")
 		GuildID := m.GuildID
 		db.List(GuildID)
-
 		for _, v := range db.ListResult {
-			m := v["Name"]
-			m1 := v["Url"]
+			m, m1 := v["Name"], v["Url"]
 			str, str1 := fmt.Sprintf("%v", m), fmt.Sprintf("%v", m1)
-			fmt.Println(str, str1)
 			embed.AddField(str, str1)
 		}
 		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
 	}
+
 	if strings.HasSuffix(m.Content, "bonk") {
 		embed := embedHelp.NewEmbed()
 		embed.SetTitle("Fuck off weeb")
@@ -145,32 +154,63 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		embed.SetColor(0x00ff00)
 		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
 	}
+	if strings.HasPrefix(m.Content, "!emotestats") {
+		function.SplitStringEmote(m)
+		embed := embedHelp.NewEmbed()
+		embed.SetTitle("Pls dont fcking crash🚀🚀🚀🚀")
+		db.ListEmote(function.Person, s, m)
 
-	if strings.HasPrefix(m.Content, "!bonk") {
+		for _, v := range db.ListEmoteResult {
 
+			m, m1 := v["Emote"], v["EmoteCount"]
+			str, str1 := fmt.Sprintf("%v", m), fmt.Sprintf("%v", m1)
+			embed.AddField(str, str1)
+
+		}
+		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
+	}
+	if strings.HasPrefix(m.Content, "!emoteleaderboard") {
+		re := regexp.MustCompile(`<:\w+:\d{10,45}>`)
+		//if len(re.FindString(m.Content)) >= 1 {
+		Emote := re.FindString(m.Content)
+		fmt.Println(Emote)
+		//function.Leaderboard(m)
+		embed := embedHelp.NewEmbed()
+		embed.SetTitle(Emote + "Leaderboard")
+		db.LeaderBoard(Emote, s, m)
+
+		for _, v := range db.ListEmoteResult {
+			m, m1 := v["AuthorUserName"], v["EmoteCount"]
+			str, str1 := fmt.Sprintf("%v", m), fmt.Sprintf("%v", m1)
+			embed.AddField(str, str1)
+		}
+		for i := 0; i < len(db.ListEmoteResult); i++ {
+
+		}
+		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
+	}
+	if strings.HasPrefix(m.Content, "test") {
 		// Find the channel that the message came from.
 		c, err := s.State.Channel(m.ChannelID)
 		if err != nil {
 			// Could not find channel.
 			return
 		}
-
 		// Find the guild for that channel.
 		g, err := s.State.Guild(c.GuildID)
 		if err != nil {
 			// Could not find guild.
 			return
 		}
-
-		// BIG TODO
 		// Look for the message sender in that guild's current voice states.
+
 		for _, vs := range g.VoiceStates {
 			if vs.UserID == m.Author.ID {
+
 				err = voiceChat.PlaySound(s, g.ID, vs.ChannelID)
 				if err != nil {
 					fmt.Println("Error playing sound:", err)
 				}
-
 				return
 			}
 		}

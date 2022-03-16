@@ -26,12 +26,13 @@ var User UserStruct
 var config *configStruct
 var UrlString string
 var Person string
+
 var NameString string
 var ListResult []bson.M
+var ListEmoteResult []bson.M
 
 //Used together with !add - Also checks prior if name already exists in database if it does its discarded.
 func StoreData(Person, Url, GuildID string, C chan string) {
-	//TODO VALIDATION WITH VALIDATIONBOOL FROM FUNCTION OR SOMETHING DONT FCKING KNOW
 	if Url == "" {
 		message := "That op.gg is not valid you fucktard"
 		C <- message
@@ -43,21 +44,13 @@ func StoreData(Person, Url, GuildID string, C chan string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	//TODO NEEDS TO ADD USERDATABASED BASED ON GUILD.ID
-	if err != nil {
-		fmt.Println("idk bro")
-	}
 
-	//TODO TEMPORARY CODE JUST TO TEST
-	//userDatabase := client.Database("userDatabase")
-	userDatabase := client.Database(GuildID)
+	userDatabase := client.Database(GuildID + "OpggDatabase")
 	userCollection := userDatabase.Collection("UserStructs")
 	User := UserStruct{
 		Person: Person,
 		Url:    Url,
 	}
-
-	//Temporary code going up -- normal code is commented out
 	filterCursor, err := userCollection.Find(ctx, bson.M{"Name": Person})
 	if err != nil {
 		log.Fatal(err)
@@ -81,15 +74,15 @@ func StoreData(Person, Url, GuildID string, C chan string) {
 	//means a result was found in the database
 	if len(result) >= 1 {
 		fmt.Println(User)
-		var interfaceToString interface{}
-		interfaceToString = result[0]["Name"]
+		//var interfaceToString interface{}
+		interfaceToString := result[0]["Name"]
+		//interfaceToString = result[0]["Name"]
 		UrlString := fmt.Sprintf("%v", interfaceToString)
 		if err != nil {
 			panic(err)
 		}
 		//Checks
 		if UrlString != Person {
-
 			insertResult, err := userCollection.InsertOne(ctx, User)
 			if err != nil {
 				panic(err)
@@ -120,7 +113,7 @@ func DeleteData(Person, GuildID string, C chan string) {
 	defer client.Disconnect(ctx)
 
 	//TODO NEEDS TO ADD USERDATABASED BASED ON GUILD.ID
-	userDatabase := client.Database(GuildID)
+	userDatabase := client.Database(GuildID + "OpggDatabase")
 	userCollection := userDatabase.Collection("UserStructs")
 	result, err := userCollection.DeleteOne(ctx, bson.M{"Name": Person})
 	if err != nil {
@@ -150,8 +143,7 @@ func SearchData(Person, GuildID string, C chan string) {
 		log.Fatal(err)
 	}
 	defer client.Disconnect(ctx)
-	//TODO NEEDS TO ADD USERDATABASED BASED ON GUILD.ID
-	userDatabase := client.Database(GuildID)
+	userDatabase := client.Database(GuildID + "OpggDatabase")
 	userCollection := userDatabase.Collection("UserStructs")
 	filterCursor, err := userCollection.Find(ctx, bson.M{"Name": Person})
 	if err != nil {
@@ -170,7 +162,7 @@ func SearchData(Person, GuildID string, C chan string) {
 		var interfaceToString interface{}
 		interfaceToString = result[0]["Url"]
 		UrlString := fmt.Sprintf("%v", interfaceToString)
-		message := function.Person + " Is absolutely pisslow " + UrlString
+		message := function.Person + " is absolutely pisslow " + UrlString
 		C <- message
 		if err != nil {
 			panic(err)
@@ -178,7 +170,6 @@ func SearchData(Person, GuildID string, C chan string) {
 	}
 }
 
-//Not currently functional
 func List(GuildID string) {
 	ReadConfig()
 	client, err := mongo.NewClient(options.Client().ApplyURI(config.Token))
@@ -191,8 +182,7 @@ func List(GuildID string) {
 		log.Fatal(err)
 	}
 	defer client.Disconnect(ctx)
-	//TODO NEEDS TO ADD USERDATABASED BASED ON GUILD.ID
-	userDatabase := client.Database(GuildID)
+	userDatabase := client.Database(GuildID + "OpggDatabase")
 	userCollection := userDatabase.Collection("UserStructs")
 	filterCursor, err := userCollection.Find(ctx, bson.M{})
 	if err = filterCursor.All(ctx, &ListResult); err != nil {
@@ -202,7 +192,6 @@ func List(GuildID string) {
 		panic(err)
 	}
 }
-
 func AddFromSearch() {
 
 }

@@ -14,6 +14,7 @@ import (
 var Url string    //op.gg URL
 var Person string //Person assigned to a URL
 var Region string //Region assigned
+var Emote string
 
 /* type discordStruct struct {
 	s *discordgo.Session
@@ -106,29 +107,72 @@ func SplitStringPerson(m *discordgo.MessageCreate) (string, error) {
 	}
 	return Person, nil
 }
+func SplitStringEmote(m *discordgo.MessageCreate) (string, error) {
+	str := strings.Split(m.Content, " ")[1:]
+	if len(str) == 0 {
+		return "Error", errors.New("Error") // needs to be fixed
+	}
+	if len(str) == 1 {
+		Person = strings.ToLower(str[0])
+		fmt.Println(Person)
+	}
+	if len(str) >= 2 {
+		return "Error", errors.New("Error")
+	}
+	return Person, nil
+}
 
 //Search function that works together with splitstringperson and splitstringregion
 func Search(Region string, Person string, C chan string) {
 	if Region == "euw" || Region == "euwest" {
-		Url := "https://euw.op.gg/summoner/" + "userName=" + Person //Euwest
+		Url := "https://euw.op.gg/summoners/euw/" + Person //Euwest
 		C <- Url
 	}
 	if Region == "eune" || Region == "northeast" {
-		Url := "https://eune.op.gg/summoner/" + "userName=" + Person //EUNE
+		Url := "https://eune.op.gg/summoners/eune/" + Person //EUNE
 		C <- Url
 	}
 	if Region == "kr" || Region == "korea" {
-		Url := "https://www.op.gg/summoner/" + "userName=" + Person //Korea
+		Url := "https://www.op.gg/summoners/kr/" + Person //Korea
 		C <- Url
 	}
 	if Region == "na" || Region == "northamerica" || Region == "murica" {
-		Url := "https://na.op.gg/summoner/" + "userName=" + Person //NA
+		Url := "https://na.op.gg/summoners/na/" + Person //NA
 		C <- Url
 	} else {
 		message := "Ran into some error while searching shit"
 		C <- message
 	}
 }
+
+/*
+func Leaderboard(m *discordgo.MessageCreate) (string, error) {
+	re := regexp.MustCompile(`<:\w+:\d{10,45}>`)
+	if len(re.FindString(m.Content)) >= 1 {
+		Emote := re.FindString(m.Content)
+
+*/
+/* str := strings.Split(m.Content, " ")[1:]
+emotebool, err := regexp.MatchString(`<:\w+:\d{10,45}>`, m.Content)
+if err != nil {
+	fmt.Println(err) */
+/* }
+if emotebool {
+	Emote = str[0]
+	fmt.Println(Emote)
+}
+if len(str) >= 2 {
+	fmt.Println("Error2")
+	fmt.Println(len(str))
+	return "", errors.New("Error")
+}
+if len(str) == 0 {
+	fmt.Println("Error2")
+	fmt.Println(len(str))
+	return "", errors.New("Error") */
+/* }
+	return Emote, nil
+} */
 
 //Function used together with mongoDB,
 func Add(m *discordgo.MessageCreate) (string, string, error) {
@@ -170,9 +214,10 @@ func Delete(m *discordgo.MessageCreate) (string, error) {
 
 //https?:\/\/(euw)?(na)?(kr)?(eune)?(tr)?(las)?(lan)?\.op\.gg\/.+
 //https?://(euw)?(na)?(kr)?(eune)?(tr)?(las)?(lan)?.op.gg/.+
+//https?:\/\/(kr|jp|na|euw|eune|oce|br|las|lan|ru|tr|sg|ig|ph|tw|vn|th)\.op\.gg\/summoner\/userName=\w+
 
 func ValidateURL(Url string, C chan string) {
-	validate, err := regexp.MatchString(`https?://(euw)?(na)?(kr)?(eune)?(tr)?(las)?(lan)?.op.gg/.+`, Url)
+	validate, err := regexp.MatchString(`https?:\/\/(kr|jp|na|euw|eune|oce|br|las|lan|ru|tr|sg|ig|ph|tw|vn|th)\.op\.gg\/summoners\/(kr|jp|na|euw|eune|oce|br|las|lan|ru|tr|sg|ig|ph|tw|vn|th)/\w+`, Url)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -190,6 +235,7 @@ func ValidateURL(Url string, C chan string) {
 		if err != nil {
 			fmt.Println(err)
 		}
+		fmt.Println("this works")
 		validatedURL, err := doc.Find("h2.header__title").Html()
 		if err != nil {
 			fmt.Println(err)

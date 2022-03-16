@@ -14,7 +14,6 @@ func main() {
 		return
 	}
 	bot.Start()
-
 	<-make(chan struct{})
 	return
 }
