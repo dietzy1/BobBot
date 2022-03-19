@@ -111,7 +111,6 @@ func DeleteData(Person, GuildID string, C chan string) {
 		log.Fatal(err)
 	}
 	defer client.Disconnect(ctx)
-
 	//TODO NEEDS TO ADD USERDATABASED BASED ON GUILD.ID
 	userDatabase := client.Database(GuildID + "OpggDatabase")
 	userCollection := userDatabase.Collection("UserStructs")

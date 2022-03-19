@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/dietzy1/discord/config"
@@ -11,6 +12,7 @@ import (
 	"github.com/dietzy1/discord/function"
 	db "github.com/dietzy1/discord/mongoDatabase"
 	"github.com/dietzy1/discord/voiceChat"
+	"golang.org/x/time/rate"
 )
 
 var BotID string
@@ -25,6 +27,8 @@ var goBot *discordgo.Session
 	m discordgo.MessageCreate
 } */
 
+// https://www.youtube.com/watch?v=iPCkZWRmddc
+//for ratelimiting
 func Start() {
 	goBot, err := discordgo.New("Bot " + config.Token)
 	if err != nil {
@@ -53,8 +57,20 @@ func Start() {
 	}
 } */
 
-//BONK TRACKER
-// Each time a message event is recieved then you call a seperate function that ++ a variable based on the user ID which can be found through m.Content
+// Create a map to hold the rate limiters for each visitor and a mutex.
+var usernamemap = make(map[string]*rate.Limiter)
+var mu sync.Mutex
+
+func getAuthorUsername(username string) *rate.Limiter {
+	mu.Lock()
+	defer mu.Unlock()
+	limiter, exists := usernamemap[username]
+	if !exists {
+		limiter = rate.NewLimiter(1, 5)
+		usernamemap[username] = limiter
+	}
+	return limiter
+}
 
 func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == BotID {
@@ -63,155 +79,164 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.Bot {
 		return
 	}
-	re := regexp.MustCompile(`<:\w+:\d{10,45}>`)
-	if len(re.FindString(m.Content)) >= 1 {
-		Emote := re.FindString(m.Content)
-		db.TrackEmote(Emote, s, m)
+	username := m.Author.Username
+	limiter := getAuthorUsername(username)
+	if !limiter.Allow() {
+		fmt.Println("put something here idk")
 	}
-
-	//FIXED AND FUNCTIONAL
-	if strings.HasPrefix(m.Content, "test") {
-		C := make(chan string, 2)
-		function.TestFunction(m, C)
-		message := <-C
-		_, _ = s.ChannelMessageSend(m.ChannelID, message)
-		//fmt.Println(m.GuildID)
-	}
-	//FIXED AND FUNCTIONAL
-	if strings.HasPrefix(m.Content, "!elo") {
-		C := make(chan string, 2)
-		function.SplitString(m)
-		GuildID := m.GuildID
-		db.SearchData(function.Person, GuildID, C)
-		message := <-C
-		_, _ = s.ChannelMessageSend(m.ChannelID, message)
-
-	}
-	//FIXED AND FUNCTIONAL
-	if strings.HasPrefix(m.Content, "!search") {
-		C := make(chan string, 2)
-		function.SplitStringRegion(m)
-		function.SplitStringPerson(m)
-		//This function can be added
-		function.Search(function.Region, function.Person, C)
-		message := <-C
-		_, _ = s.ChannelMessageSend(m.ChannelID, message)
-
-	}
-	//FIXED AND FUNCTIONAL
-	if strings.HasPrefix(m.Content, "!add") {
-		C := make(chan string, 2)
-		function.Add(m)
-		function.ValidateURL(function.Url, C)
-		message := <-C
-		if message == "Not a valid op.gg you fuckface" {
-			_, _ = s.ChannelMessageSend(m.ChannelID, message)
+	if limiter.Allow() {
+		re := regexp.MustCompile(`<:\w+:\d{10,45}>`)
+		if len(re.FindString(m.Content)) >= 1 {
+			Emote := re.FindString(m.Content)
+			db.TrackEmote(Emote, s, m)
 		}
-		if message == "Valid URl" {
+
+		//FIXED AND FUNCTIONAL
+		if strings.HasPrefix(m.Content, "test") {
+			C := make(chan string, 2)
+			function.TestFunction(m, C)
+			message := <-C
+			_, _ = s.ChannelMessageSend(m.ChannelID, message)
+			//fmt.Println(m.GuildID)
+		}
+		//FIXED AND FUNCTIONAL
+		if strings.HasPrefix(m.Content, "!elo") {
+			C := make(chan string, 2)
+			function.SplitString(m)
 			GuildID := m.GuildID
-			db.StoreData(function.Person, function.Url, GuildID, C)
+			db.SearchData(function.Person, GuildID, C)
+			message := <-C
+			_, _ = s.ChannelMessageSend(m.ChannelID, message)
+
+		}
+		//FIXED AND FUNCTIONAL
+		if strings.HasPrefix(m.Content, "!search") {
+			C := make(chan string, 2)
+			function.SplitStringRegion(m)
+			function.SplitStringPerson(m)
+			//This function can be added
+			function.Search(function.Region, function.Person, C)
+			message := <-C
+			_, _ = s.ChannelMessageSend(m.ChannelID, message)
+
+		}
+		//FIXED AND FUNCTIONAL
+		if strings.HasPrefix(m.Content, "!add") {
+			C := make(chan string, 2)
+			function.Add(m)
+			function.ValidateURL(function.Url, C)
+			message := <-C
+			if message == "Not a valid op.gg you fuckface" {
+				_, _ = s.ChannelMessageSend(m.ChannelID, message)
+			}
+			if message == "Valid URl" {
+				GuildID := m.GuildID
+				db.StoreData(function.Person, function.Url, GuildID, C)
+				message := <-C
+				_, _ = s.ChannelMessageSend(m.ChannelID, message)
+			}
+		}
+		// FIXED AND FUNCTIONAL
+		if strings.HasPrefix(m.Content, "!delete") {
+			C := make(chan string, 2)
+			GuildID := m.GuildID
+			function.Delete(m)
+			db.DeleteData(function.Person, GuildID, C)
 			message := <-C
 			_, _ = s.ChannelMessageSend(m.ChannelID, message)
 		}
-	}
-	// FIXED AND FUNCTIONAL
-	if strings.HasPrefix(m.Content, "!delete") {
-		C := make(chan string, 2)
-		GuildID := m.GuildID
-		function.Delete(m)
-		db.DeleteData(function.Person, GuildID, C)
-		message := <-C
-		_, _ = s.ChannelMessageSend(m.ChannelID, message)
-	}
-	//TODO
-	if strings.HasPrefix(m.Content, "!help") {
-		embed := embedHelp.NewEmbed()
-		embed.SetTitle("BobBot guide 2k22 visualized🚀🚀🚀🚀")
-		embed.AddField("!search region username", "Example: !search euw twtvkibbylol")
-		embed.AddField("!add name op.ggURL", "Example: !add kibby https://euw.op.gg/summoner/userName=twtvkibbylol ")
-		embed.AddField("!elo assignedName", "Example: !elo kibby")
-		embed.AddField("!delete assignedName", "Example: !delete kibby")
+		//TODO
+		if strings.HasPrefix(m.Content, "!help") {
+			embed := embedHelp.NewEmbed()
+			embed.SetTitle("BobBot guide 2k22 visualized🚀🚀🚀🚀")
+			embed.AddField("!search region username", "Example: !search euw twtvkibbylol")
+			embed.AddField("!add name op.ggURL", "Example: !add kibby https://euw.op.gg/summoner/userName=twtvkibbylol ")
+			embed.AddField("!elo assignedName", "Example: !elo kibby")
+			embed.AddField("!delete assignedName", "Example: !delete kibby")
 
-		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
-	}
-	if strings.HasPrefix(m.Content, "!list") {
-		embed := embedHelp.NewEmbed()
-		embed.SetTitle("Pls dont fcking crash🚀🚀🚀🚀")
-		GuildID := m.GuildID
-		db.List(GuildID)
-		for _, v := range db.ListResult {
-			m, m1 := v["Name"], v["Url"]
-			str, str1 := fmt.Sprintf("%v", m), fmt.Sprintf("%v", m1)
-			embed.AddField(str, str1)
+			_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
 		}
-		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
-	}
-
-	if strings.HasSuffix(m.Content, "bonk") {
-		embed := embedHelp.NewEmbed()
-		embed.SetTitle("Fuck off weeb")
-		embed.SetImage("https://c.tenor.com/yHX61qy92nkAAAAC/yoshi-mario.gif")
-		embed.SetColor(0x00ff00)
-		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
-	}
-	if strings.HasPrefix(m.Content, "!emotestats") {
-		function.SplitStringEmote(m)
-		embed := embedHelp.NewEmbed()
-		embed.SetTitle("Pls dont fcking crash🚀🚀🚀🚀")
-		db.ListEmote(function.Person, s, m)
-
-		for _, v := range db.ListEmoteResult {
-
-			m, m1 := v["Emote"], v["EmoteCount"]
-			str, str1 := fmt.Sprintf("%v", m), fmt.Sprintf("%v", m1)
-			embed.AddField(str, str1)
-
+		if strings.HasPrefix(m.Content, "!list") {
+			embed := embedHelp.NewEmbed()
+			embed.SetTitle("Pls dont fcking crash🚀🚀🚀🚀")
+			GuildID := m.GuildID
+			db.List(GuildID)
+			for _, v := range db.ListResult {
+				m, m1 := v["Name"], v["Url"]
+				str, str1 := fmt.Sprintf("%v", m), fmt.Sprintf("%v", m1)
+				embed.AddField(str, str1)
+			}
+			_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
 		}
-		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
-	}
-	if strings.HasPrefix(m.Content, "!emoteleaderboard") {
-		re := regexp.MustCompile(`<:\w+:\d{10,45}>`)
-		//if len(re.FindString(m.Content)) >= 1 {
-		Emote := re.FindString(m.Content)
-		fmt.Println(Emote)
-		//function.Leaderboard(m)
-		embed := embedHelp.NewEmbed()
-		embed.SetTitle(Emote + "Leaderboard")
-		db.LeaderBoard(Emote, s, m)
 
-		for _, v := range db.ListEmoteResult {
-			m, m1 := v["AuthorUserName"], v["EmoteCount"]
-			str, str1 := fmt.Sprintf("%v", m), fmt.Sprintf("%v", m1)
-			embed.AddField(str, str1)
+		if strings.HasSuffix(m.Content, "bonk") {
+			embed := embedHelp.NewEmbed()
+			embed.SetTitle("Fuck off weeb")
+			embed.SetImage("https://c.tenor.com/yHX61qy92nkAAAAC/yoshi-mario.gif")
+			embed.SetColor(0x00ff00)
+			_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
 		}
-		for i := 0; i < len(db.ListEmoteResult); i++ {
-
-		}
-		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
-	}
-	if strings.HasPrefix(m.Content, "test") {
-		// Find the channel that the message came from.
-		c, err := s.State.Channel(m.ChannelID)
-		if err != nil {
-			// Could not find channel.
-			return
-		}
-		// Find the guild for that channel.
-		g, err := s.State.Guild(c.GuildID)
-		if err != nil {
-			// Could not find guild.
-			return
-		}
-		// Look for the message sender in that guild's current voice states.
-
-		for _, vs := range g.VoiceStates {
-			if vs.UserID == m.Author.ID {
-
-				err = voiceChat.PlaySound(s, g.ID, vs.ChannelID)
-				if err != nil {
-					fmt.Println("Error playing sound:", err)
+		if strings.HasPrefix(m.Content, "!emotestats") {
+			function.SplitStringEmote(m)
+			embed := embedHelp.NewEmbed()
+			embed.SetTitle("Pls dont fcking crash🚀🚀🚀🚀")
+			db.ListEmote(function.Person, s, m)
+			i := 0
+			for _, v := range db.ListEmoteResult {
+				i++
+				if i < 11 {
+					m, m1 := v["Emote"], v["EmoteCount"]
+					str, str1 := fmt.Sprintf("%v", m), fmt.Sprintf("%v", m1)
+					embed.AddField(str, str1)
 				}
+			}
+			_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
+
+		}
+		if strings.HasPrefix(m.Content, "!emoteleaderboard") {
+			re := regexp.MustCompile(`<:\w+:\d{10,45}>`)
+			//if len(re.FindString(m.Content)) >= 1 {
+			Emote := re.FindString(m.Content)
+			fmt.Println(Emote)
+			//function.Leaderboard(m)
+			embed := embedHelp.NewEmbed()
+			embed.SetTitle(Emote + "Leaderboard")
+			db.LeaderBoard(Emote, s, m)
+			i := 0
+			for _, v := range db.ListEmoteResult {
+				i++
+				if i < 6 {
+					m, m1 := v["AuthorUserName"], v["EmoteCount"]
+					str, str1 := fmt.Sprintf("%v", m), fmt.Sprintf("%v", m1)
+					embed.AddField(str, str1)
+				}
+			}
+			_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed.MessageEmbed)
+		}
+		if strings.HasPrefix(m.Content, "test") {
+			// Find the channel that the message came from.
+			c, err := s.State.Channel(m.ChannelID)
+			if err != nil {
+				// Could not find channel.
 				return
+			}
+			// Find the guild for that channel.
+			g, err := s.State.Guild(c.GuildID)
+			if err != nil {
+				// Could not find guild.
+				return
+			}
+			// Look for the message sender in that guild's current voice states.
+
+			for _, vs := range g.VoiceStates {
+				if vs.UserID == m.Author.ID {
+
+					err = voiceChat.PlaySound(s, g.ID, vs.ChannelID)
+					if err != nil {
+						fmt.Println("Error playing sound:", err)
+					}
+					return
+				}
 			}
 		}
 	}

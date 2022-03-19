@@ -103,7 +103,7 @@ func ListEmote(Person string, s *discordgo.Session, m *discordgo.MessageCreate) 
 		log.Fatal(err)
 	}
 	defer client.Disconnect(ctx)
-	userDatabase := client.Database(guild.ID)
+	userDatabase := client.Database(guild.ID + "EmoteDatabase")
 	userCollection := userDatabase.Collection(Person)
 	opts := options.Find()
 	opts.SetSort(bson.D{{"EmoteCount", -1}})
